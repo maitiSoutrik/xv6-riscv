@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: svkv/riscv-tools:v1.0
+    
+    # Add fail-fast strategy
+    strategy:
+      fail-fast: true
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Clean build
+      run: make clean
+      # Add explicit failure condition
+      if: success()
+
+    - name: Build project
+      run: |
+        make
+        # Check the make exit status
+        if [ $? -ne 0 ]; then
+          echo "Build failed"
+          exit 1
+        fi
+
+    - name: Run QEMU tests
+      run: |
+        # Run make qemu in the background and capture output
+        timeout 60 make qemu > qemu_output.log 2>&1 &
+        QEMU_PID=$!
+        
+        # Wait for a few seconds to let QEMU start
+        sleep 30
+        
+        # Check if QEMU is still running and the output contains no errors
+        if ! kill -0 $QEMU_PID 2>/dev/null || grep -i "error\|failed" qemu_output.log; then
+          echo "QEMU test failed"
+          exit 1
+        fi
+        
+        # Kill QEMU process
+        kill $QEMU_PID || true
