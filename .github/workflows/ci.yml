@@ -3,10 +3,10 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - riscv
   pull_request:
     branches:
-      - main
+      - riscv
 
 jobs:
   build-and-test:
