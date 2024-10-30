@@ -38,16 +38,25 @@ jobs:
 
     - name: Run QEMU tests
       run: |
-        # Run make qemu in the background and capture output
-        timeout 60 make qemu > qemu_output.log 2>&1 &
+        # Run QEMU with proper RISC-V options
+        timeout 120 qemu-system-riscv64 \
+          -machine virt \
+          -nographic \
+          -bios none \
+          -kernel kernel/kernel \
+          -m 128M \
+          -smp 1 \
+          > qemu_output.log 2>&1 &
+        
         QEMU_PID=$!
         
-        # Wait for a few seconds to let QEMU start
+        # Wait for QEMU to start
         sleep 30
         
-        # Check if QEMU is still running and the output contains no errors
+        # Check QEMU status and output
         if ! kill -0 $QEMU_PID 2>/dev/null || grep -i "error\|failed" qemu_output.log; then
           echo "QEMU test failed"
+          cat qemu_output.log
           exit 1
         fi
         
